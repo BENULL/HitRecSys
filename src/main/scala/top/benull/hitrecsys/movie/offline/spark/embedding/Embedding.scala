@@ -14,7 +14,10 @@ import org.apache.spark.sql.functions.{array_join, col, collect_list, struct, ud
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.params.SetParams
 
+import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
+import scala.util.control.Breaks.{break, breakable}
 
 /**
  * descriptions:
@@ -162,6 +165,116 @@ object Embedding {
     bucketModel.approxNearestNeighbors(movieEmbDF, sampleEmb, 5).show(truncate = false)
   }
 
+
+  def generateTransitionMatrix(samples: RDD[Seq[String]]):(mutable.Map[String, mutable.Map[String, Double]], mutable.Map[String, Double]) = {
+    val pairSamples = samples.flatMap[(String, String)](sample => {
+      var pairSeq = Seq[(String, String)]()
+      var  previousItem:String = null
+      sample.foreach((element:String) => {
+        if (previousItem != null){
+          pairSeq = pairSeq :+ (previousItem, element)
+        }
+        previousItem = element
+      })
+      pairSeq
+    })
+
+    val pairCountMap = pairSamples.countByValue()
+    var pairTotalCount = 0L
+
+    // init 2d transitionCountMatrix Map
+    val transitionCountMatrix = mutable.Map[String, mutable.Map[String, Long]]()
+    val itemCountMap = mutable.Map[String, Long]()
+
+    // generate transitionCountMatrix
+    pairCountMap.foreach( pair => {
+      val pairItems = pair._1
+      val count = pair._2
+
+      if(!transitionCountMatrix.contains(pairItems._1)){
+        transitionCountMatrix(pairItems._1) = mutable.Map[String, Long]()
+      }
+
+      transitionCountMatrix(pairItems._1)(pairItems._2) = count
+      itemCountMap(pairItems._1) = itemCountMap.getOrElse[Long](pairItems._1, 0) + count
+      pairTotalCount = pairTotalCount + count
+    })
+
+    val transitionMatrix = mutable.Map[String, mutable.Map[String, Double]]()
+    val itemDistribution = mutable.Map[String, Double]()
+
+    transitionCountMatrix foreach {
+      case (itemAId, transitionMap) =>
+        transitionMatrix(itemAId) = mutable.Map[String, Double]()
+        transitionMap foreach { case (itemBId, transitionCount) => transitionMatrix(itemAId)(itemBId) = transitionCount.toDouble / itemCountMap(itemAId) }
+    }
+
+    itemCountMap foreach { case (itemId, itemCount) => itemDistribution(itemId) = itemCount.toDouble / pairTotalCount }
+    (transitionMatrix, itemDistribution)
+  }
+
+  def oneRandomWalk(transitionMatrix : mutable.Map[String, mutable.Map[String, Double]], itemDistribution : mutable.Map[String, Double], sampleLength:Int): Seq[String] ={
+    val sample = mutable.ListBuffer[String]()
+
+    // pick the first element
+    val randomDouble = Random.nextDouble()
+    var firstItem = ""
+    var accumulateProb:Double = 0D
+    // random choice start point based item distribute
+    breakable { for ((item, prob) <- itemDistribution) {
+      accumulateProb += prob
+      if (accumulateProb >= randomDouble){
+        firstItem = item
+        break
+      }
+    }}
+
+    sample.append(firstItem)
+    var curElement = firstItem
+
+    breakable { for(_ <- 1 until sampleLength) {
+      if (!itemDistribution.contains(curElement) || !transitionMatrix.contains(curElement)){
+        break
+      }
+
+      val probDistribution = transitionMatrix(curElement)
+      val randomDouble = Random.nextDouble()
+      breakable { for ((item, prob) <- probDistribution) {
+        if (randomDouble >= prob){
+          curElement = item
+          break
+        }
+      }}
+      sample.append(curElement)
+    }}
+    Seq(sample.toList : _*)
+  }
+
+  def randomWalk(transitionMatrix : mutable.Map[String, mutable.Map[String, Double]], itemDistribution : mutable.Map[String, Double], sampleCount:Int, sampleLength:Int): Seq[Seq[String]] ={
+    val samples = mutable.ListBuffer[Seq[String]]()
+    for(_ <- 1 to sampleCount) {
+      samples.append(oneRandomWalk(transitionMatrix, itemDistribution, sampleLength))
+    }
+
+    // : _* change to param seq
+    Seq(samples.toList : _*)
+  }
+
+  def graphEmb(samples : RDD[Seq[String]], sparkSession: SparkSession, embLength:Int, embOutputFilename:String,
+               saveToRedis:Boolean, redisKeyPrefix:String): Word2VecModel ={
+    val transitionMatrixAndItemDis = generateTransitionMatrix(samples)
+
+    println(transitionMatrixAndItemDis._1.size)
+    println(transitionMatrixAndItemDis._2.size)
+
+    val sampleCount = 20000
+    val sampleLength = 10
+    val newSamples = randomWalk(transitionMatrixAndItemDis._1, transitionMatrixAndItemDis._2, sampleCount, sampleLength)
+
+    val rddSamples = sparkSession.sparkContext.parallelize(newSamples)
+    trainItem2vec(sparkSession, rddSamples, embLength, embOutputFilename, saveToRedis, redisKeyPrefix)
+  }
+
   def main(args: Array[String]): Unit = {
     Logger.getLogger("org").setLevel(Level.ERROR)
 
@@ -179,6 +292,10 @@ object Embedding {
     val model = trainItem2vec(spark, samples, embLength, "item2vecEmb.csv", saveToRedis = false, "i2vEmb")
 
     //    generateUserEmb(spark, rawSampleDataPath, model, embLength, "userEmb.csv", saveToRedis = false, "uEmb")
+
+
+    //graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
+
 
   }
 }
