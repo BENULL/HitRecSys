@@ -166,12 +166,12 @@ object Embedding {
   }
 
 
-  def generateTransitionMatrix(samples: RDD[Seq[String]]):(mutable.Map[String, mutable.Map[String, Double]], mutable.Map[String, Double]) = {
+  def generateTransitionMatrix(samples: RDD[Seq[String]]): (mutable.Map[String, mutable.Map[String, Double]], mutable.Map[String, Double]) = {
     val pairSamples = samples.flatMap[(String, String)](sample => {
       var pairSeq = Seq[(String, String)]()
-      var  previousItem:String = null
-      sample.foreach((element:String) => {
-        if (previousItem != null){
+      var previousItem: String = null
+      sample.foreach((element: String) => {
+        if (previousItem != null) {
           pairSeq = pairSeq :+ (previousItem, element)
         }
         previousItem = element
@@ -187,11 +187,11 @@ object Embedding {
     val itemCountMap = mutable.Map[String, Long]()
 
     // generate transitionCountMatrix
-    pairCountMap.foreach( pair => {
+    pairCountMap.foreach(pair => {
       val pairItems = pair._1
       val count = pair._2
 
-      if(!transitionCountMatrix.contains(pairItems._1)){
+      if (!transitionCountMatrix.contains(pairItems._1)) {
         transitionCountMatrix(pairItems._1) = mutable.Map[String, Long]()
       }
 
@@ -213,55 +213,61 @@ object Embedding {
     (transitionMatrix, itemDistribution)
   }
 
-  def oneRandomWalk(transitionMatrix : mutable.Map[String, mutable.Map[String, Double]], itemDistribution : mutable.Map[String, Double], sampleLength:Int): Seq[String] ={
+  def oneRandomWalk(transitionMatrix: mutable.Map[String, mutable.Map[String, Double]], itemDistribution: mutable.Map[String, Double], sampleLength: Int): Seq[String] = {
     val sample = mutable.ListBuffer[String]()
 
     // pick the first element
     val randomDouble = Random.nextDouble()
     var firstItem = ""
-    var accumulateProb:Double = 0D
+    var accumulateProb: Double = 0D
     // random choice start point based item distribute
-    breakable { for ((item, prob) <- itemDistribution) {
-      accumulateProb += prob
-      if (accumulateProb >= randomDouble){
-        firstItem = item
-        break
+    breakable {
+      for ((item, prob) <- itemDistribution) {
+        accumulateProb += prob
+        if (accumulateProb >= randomDouble) {
+          firstItem = item
+          break
+        }
       }
-    }}
+    }
 
     sample.append(firstItem)
     var curElement = firstItem
 
-    breakable { for(_ <- 1 until sampleLength) {
-      if (!itemDistribution.contains(curElement) || !transitionMatrix.contains(curElement)){
-        break
-      }
-
-      val probDistribution = transitionMatrix(curElement)
-      val randomDouble = Random.nextDouble()
-      breakable { for ((item, prob) <- probDistribution) {
-        if (randomDouble >= prob){
-          curElement = item
+    breakable {
+      for (_ <- 1 until sampleLength) {
+        if (!itemDistribution.contains(curElement) || !transitionMatrix.contains(curElement)) {
           break
         }
-      }}
-      sample.append(curElement)
-    }}
-    Seq(sample.toList : _*)
+
+        val probDistribution = transitionMatrix(curElement)
+        val randomDouble = Random.nextDouble()
+        breakable {
+          for ((item, prob) <- probDistribution) {
+            if (randomDouble >= prob) {
+              curElement = item
+              break
+            }
+          }
+        }
+        sample.append(curElement)
+      }
+    }
+    Seq(sample.toList: _*)
   }
 
-  def randomWalk(transitionMatrix : mutable.Map[String, mutable.Map[String, Double]], itemDistribution : mutable.Map[String, Double], sampleCount:Int, sampleLength:Int): Seq[Seq[String]] ={
+  def randomWalk(transitionMatrix: mutable.Map[String, mutable.Map[String, Double]], itemDistribution: mutable.Map[String, Double], sampleCount: Int, sampleLength: Int): Seq[Seq[String]] = {
     val samples = mutable.ListBuffer[Seq[String]]()
-    for(_ <- 1 to sampleCount) {
+    for (_ <- 1 to sampleCount) {
       samples.append(oneRandomWalk(transitionMatrix, itemDistribution, sampleLength))
     }
 
     // : _* change to param seq
-    Seq(samples.toList : _*)
+    Seq(samples.toList: _*)
   }
 
-  def graphEmb(samples : RDD[Seq[String]], sparkSession: SparkSession, embLength:Int, embOutputFilename:String,
-               saveToRedis:Boolean, redisKeyPrefix:String): Word2VecModel ={
+  def graphEmb(samples: RDD[Seq[String]], sparkSession: SparkSession, embLength: Int, embOutputFilename: String,
+               saveToRedis: Boolean, redisKeyPrefix: String): Word2VecModel = {
     val transitionMatrixAndItemDis = generateTransitionMatrix(samples)
 
     println(transitionMatrixAndItemDis._1.size)
@@ -293,9 +299,6 @@ object Embedding {
 
     //    generateUserEmb(spark, rawSampleDataPath, model, embLength, "userEmb.csv", saveToRedis = false, "uEmb")
 
-
-    //graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
-
-
+    //    graphEmb(samples, spark, embLength, "itemGraphEmb.csv", saveToRedis = true, "graphEmb")
   }
 }
