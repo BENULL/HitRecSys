@@ -1,7 +1,9 @@
 package top.benull.hitrecsys.movie.online.entity
 
 
+import net.minidev.json.annotate.JsonIgnore
 import top.benull.hitrecsys.movie.online.entity.Rating
+import top.benull.hitrecsys.movie.online.model.Embedding
 
 import scala.beans.BeanProperty
 
@@ -16,8 +18,7 @@ case class User(){
   @BeanProperty var ratingCount:Int = 0
   @BeanProperty var ratings:List[Rating] = List()
   var userFeatures : Map[String,String] = Map()
-
-  // TODO embvector
+  @BeanProperty @JsonIgnore var emb:Embedding = _
 
   def addRating(rating: Rating) = {
     ratings = ratings:+rating

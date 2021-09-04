@@ -46,10 +46,33 @@ object DataManager {
           }
         }
       })
+      bufferedSource.close()
       println(s"Loading movie embedding completed. $validEmbCount movie embeddings in total.")
     }else{
       println("Loading movie embedding from Redis ...")
 //      println(s"Loading movie embedding completed. $validEmbCount movie embeddings in total.")
+    }
+  }
+
+  def loadUserEmb(userEmbPath: String, embKey: String): Unit = {
+    if (Config.EMB_DATA_SOURCE.equals(Config.DATA_SOURCE_FILE)) {
+      println(s"Loading user embedding from $userEmbPath ...")
+      var validEmbCount = 0
+      val bufferedSource = Source.fromFile(userEmbPath)
+      bufferedSource.getLines().foreach(line => {
+        val rowData = line.split(":").map(_.trim)
+        if (rowData.length == 2) {
+            getUserById(rowData(0).toInt) match {
+              case Some(user) => {
+                user.setEmb(Utility.parseEmbStr(rowData(1)))
+                validEmbCount += 1
+              }
+              case None =>
+            }
+        }
+      })
+      bufferedSource.close()
+      println(s"Loading user embedding completed. $validEmbCount user embeddings in total.")
     }
   }
 
@@ -63,7 +86,7 @@ object DataManager {
 //      loadMovieFeatures("mf:")
 //    }
 
-//    loadUserEmb(userEmbPath, userRedisKey);
+    loadUserEmb(userEmbPath, userRedisKey);
   }
 
   def loadLinkData(linkDataPath: String) = {
@@ -171,6 +194,7 @@ object DataManager {
     val movieResourcesPath = this.getClass.getResource("/webroot/sampledata/movies.csv")
     val linkResourcesPath = this.getClass.getResource("/webroot/sampledata/links.csv")
     val movieEmbPath = this.getClass.getResource("/webroot/modeldata/item2vecEmb.csv")
+    val userEmbPath = this.getClass.getResource("/webroot/modeldata/userEmb.csv")
 //    System.out.printf("Web Root URI: %s%n", webRootUri.getPath)
 
     //load all the data to DataManager
@@ -185,6 +209,7 @@ object DataManager {
     DataManager.getInstance().loadMovieData(movieResourcesPath.getPath)
     DataManager.getInstance().loadLinkData(linkResourcesPath.getPath)
     DataManager.getInstance().loadMovieEmb(movieEmbPath.getPath, "i2vEmb")
+    DataManager.getInstance().loadUserEmb(userEmbPath.getPath, "uEmb")
     println(s"Loading rating data completed  ratings in total.")
   }
 }
