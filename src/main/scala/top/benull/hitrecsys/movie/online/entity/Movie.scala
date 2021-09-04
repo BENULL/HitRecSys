@@ -1,6 +1,7 @@
 package top.benull.hitrecsys.movie.online.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import top.benull.hitrecsys.movie.online.model.Embedding
 
 import scala.beans.BeanProperty
 
@@ -18,6 +19,7 @@ case class Movie(){
   @BeanProperty var averageRating: Double = 0
   @BeanProperty var genres:List[String] = List()
   @BeanProperty @JsonIgnore var ratings: Array[Rating] = Array()
+  @BeanProperty @JsonIgnore var emb: Embedding = _
   @BeanProperty var topRatings: List[Rating] = List()
   @JsonIgnore var movieFeatures: Map[String,String] = Map()
 
