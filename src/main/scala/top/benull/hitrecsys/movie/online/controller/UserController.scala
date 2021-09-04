@@ -16,7 +16,7 @@ import top.benull.hitrecsys.movie.online.service.UserService
 class UserController @Autowired() (private val userService: UserService){
 
   @GetMapping(value = Array("/user/{id}"))
-  def getUserById(@PathVariable(value = "id") id: Long) = userService.getUserById(id) match {
+  def getUserById(@PathVariable(value = "id") id: Int) = userService.getUserById(id) match {
     case Some(user) => ServerResponse.createBySuccess(user)
     case None => ServerResponse.createByErrorMessage("userid not exist")
   }

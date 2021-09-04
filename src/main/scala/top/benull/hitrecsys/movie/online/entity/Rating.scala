@@ -1,5 +1,9 @@
 package top.benull.hitrecsys.movie.online.entity
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.jsontype.TypeSerializer
+import com.fasterxml.jackson.databind.{JsonSerializable, SerializerProvider}
+
 import scala.beans.BeanProperty
 
 /**

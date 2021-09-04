@@ -1,6 +1,7 @@
 package top.benull.hitrecsys.movie.online.service
 
 import org.springframework.stereotype.Service
+import top.benull.hitrecsys.movie.online.datamanager.DataManager
 import top.benull.hitrecsys.movie.online.entity.User
 
 /**
@@ -13,8 +14,8 @@ import top.benull.hitrecsys.movie.online.entity.User
 @Service
 class UserService {
 
-  def getUserById(id: Long) = {
-    Option(User())
+  def getUserById(id: Int) = {
+    DataManager.getInstance().getUserById(id)
   }
 
 }

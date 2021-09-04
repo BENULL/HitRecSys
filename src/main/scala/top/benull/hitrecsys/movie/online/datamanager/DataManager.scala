@@ -5,8 +5,9 @@ import java.net.URI
 
 import breeze.linalg.csvread
 import org.springframework.context.annotation.Bean
+import top.benull.hitrecsys.movie.online.config.Config
 import top.benull.hitrecsys.movie.online.entity.{Movie, Rating, User}
-import top.benull.hitrecsys.movie.util.{Config, Utility}
+import top.benull.hitrecsys.movie.util.Utility
 
 import scala.collection.mutable
 import scala.collection.mutable.{HashMap, ListBuffer}
