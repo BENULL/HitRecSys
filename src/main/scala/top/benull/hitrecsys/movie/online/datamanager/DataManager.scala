@@ -8,7 +8,6 @@ import org.springframework.context.annotation.Bean
 import top.benull.hitrecsys.movie.online.config.Config
 import top.benull.hitrecsys.movie.online.entity.{Movie, Rating, User}
 import top.benull.hitrecsys.movie.util.Utility
-
 import scala.collection.mutable
 import scala.collection.mutable.{HashMap, ListBuffer}
 import scala.io.Source
@@ -139,6 +138,7 @@ object DataManager {
     bufferedSource.close()
     println("Loading movie data completed. " + movieMap.size + " movies in total.")
   }
+
   def addMovie2GenreIndex(genre:String, movie:Movie):Unit = {
     genreReverseIndexMap.update(genre, movie::genreReverseIndexMap.getOrElse(genre, List[Movie]()))
   }
@@ -189,6 +189,24 @@ object DataManager {
   def getUserById(userId:Int) = userMap.get(userId)
 
   def getMovieById(movieId:Int) = movieMap.get(movieId)
+
+  val sortFunc: String =>(Movie, Movie) => Boolean = {
+    case "rating" => (m1:Movie, m2:Movie)=>{m1.getAverageRating>m2.getAverageRating}
+    case "releaseYear" => (m1:Movie, m2:Movie)=>{m1.getReleaseYear>m2.getReleaseYear}
+  }
+
+  def getMoviesByGenre(genre:String, size:Int, sortBy:String):Option[List[Movie]] = {
+    if (genre == null) None
+    else{
+      genreReverseIndexMap.get(genre) match {
+        case Some(movies) => Some(movies.sortWith(sortFunc(sortBy)).take(size))
+        case None => None
+      }
+    }
+  }
+
+  //get top N movies order by sortBy method
+  def getMovies(CANDIDATE_SIZE: Int, sortBy: String):List[Movie] = movieMap.values.toList.sortWith(sortFunc(sortBy)).take(CANDIDATE_SIZE)
 
   def main(args: Array[String]): Unit = {
     val ratingResourcesPath = this.getClass.getResource("/webroot/sampledata/ratings.csv")

@@ -16,6 +16,6 @@ class MovieController @Autowired() (private val movieService: MovieService){
   @GetMapping(value = Array("/movie/{id}"))
   def getMovieById(@PathVariable(value = "id") id: Int) = movieService.getMovieById(id) match {
     case Some(movie) => ServerResponse.createBySuccess(movie)
-    case None => ServerResponse.createByErrorMessage("userid not exist")
+    case None => ServerResponse.createByErrorMessage("movie does not exist")
   }
 }

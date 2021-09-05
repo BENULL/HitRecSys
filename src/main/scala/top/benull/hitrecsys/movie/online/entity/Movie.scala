@@ -27,7 +27,7 @@ case class Movie(){
 
   def addTopRating(rating: Rating): Unit = {
     topRatings = topRatings :+ rating
-    topRatings = topRatings.sortBy(_.getScore).take(TOP_RATING_SIZE)
+    topRatings = topRatings.sortBy(_.getScore)(Ordering.Float.reverse).take(TOP_RATING_SIZE)
   }
 
   def addRating(rating:Rating) : Unit= {

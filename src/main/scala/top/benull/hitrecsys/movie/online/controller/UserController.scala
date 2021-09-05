@@ -18,7 +18,7 @@ class UserController @Autowired() (private val userService: UserService){
   @GetMapping(value = Array("/user/{id}"))
   def getUserById(@PathVariable(value = "id") id: Int) = userService.getUserById(id) match {
     case Some(user) => ServerResponse.createBySuccess(user)
-    case None => ServerResponse.createByErrorMessage("userid not exist")
+    case None => ServerResponse.createByErrorMessage("user does not exist")
   }
 
 }

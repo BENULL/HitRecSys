@@ -1,8 +1,6 @@
 package top.benull.hitrecsys.movie.online.entity
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
-import top.benull.hitrecsys.movie.online.entity.Rating
 import top.benull.hitrecsys.movie.online.model.Embedding
 
 import scala.beans.BeanProperty
